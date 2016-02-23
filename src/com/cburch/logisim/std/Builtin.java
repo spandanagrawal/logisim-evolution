@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import edu.cornell.cs3410.Components;
 import com.bfh.logisim.library.BFHPraktika;
 import com.cburch.logisim.std.arith.Arithmetic;
 import com.cburch.logisim.std.base.Base;
@@ -53,7 +54,7 @@ public class Builtin extends Library {
 	public Builtin() {
 		libraries = Arrays.asList(new Library[] { new Base(), new Gates(),
 				new Wiring(), new Plexers(), new Arithmetic(), new Memory(),
-				new Io(),  new Hdl(), new Tcl(), new BFHPraktika(), });
+				new Io(),  new Hdl(), new Tcl(), new BFHPraktika(), new Components()});
 	}
 
 	@Override

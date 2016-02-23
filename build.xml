@@ -10,6 +10,7 @@
         <delete dir="bin/com/bfh/"/>
         <delete dir="bin/com/cburch/"/>
         <delete dir="bin/com/hepia/"/>
+        <delete dir="bin/edu/cornell"/>
     </target>
 
     <target name="clean">
