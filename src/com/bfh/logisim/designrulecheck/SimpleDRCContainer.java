@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.cburch.logisim.circuit.Circuit;
+import com.cburch.logisim.circuit.Splitter;
 import com.cburch.logisim.circuit.Wire;
 import com.cburch.logisim.instance.InstanceComponent;
 
@@ -52,17 +53,39 @@ public class SimpleDRCContainer {
 	private Set<Object> DRCComponents;
 	private Circuit MyCircuit;
 	private int MarkType;
+	private int ListNumber;
+	private boolean SuppressCount;
 	
 	public SimpleDRCContainer(String Message, int level) {
 		this.Message = Message;
 		this.SeverityLevel = level;
 		MarkType = MARK_NONE;
+		ListNumber = 0;
+		SuppressCount = false;
+	}
+
+	public SimpleDRCContainer(String Message, int level, boolean SupressCount) {
+		this.Message = Message;
+		this.SeverityLevel = level;
+		MarkType = MARK_NONE;
+		ListNumber = 0;
+		this.SuppressCount = SupressCount;
 	}
 
 	public SimpleDRCContainer(Object Message, int level) {
 		this.Message = Message.toString();
 		this.SeverityLevel = level;
 		MarkType = MARK_NONE;
+		ListNumber = 0;
+		SuppressCount = false;
+	}
+
+	public SimpleDRCContainer(Object Message, int level, boolean SupressCount) {
+		this.Message = Message.toString();
+		this.SeverityLevel = level;
+		MarkType = MARK_NONE;
+		ListNumber = 0;
+		this.SuppressCount = SupressCount;
 	}
 
 	public SimpleDRCContainer(Circuit circ, Object Message, int level, int MarkMask) {
@@ -70,6 +93,17 @@ public class SimpleDRCContainer {
 		this.SeverityLevel = level;
 		MyCircuit=circ;
 		MarkType = MarkMask;
+		ListNumber = 0;
+		SuppressCount = false;
+	}
+
+	public SimpleDRCContainer(Circuit circ, Object Message, int level, int MarkMask, boolean SupressCount) {
+		this.Message = Message.toString();
+		this.SeverityLevel = level;
+		MyCircuit=circ;
+		MarkType = MarkMask;
+		ListNumber = 0;
+		this.SuppressCount = SupressCount;
 	}
 
 	@Override
@@ -102,6 +136,24 @@ public class SimpleDRCContainer {
 		DRCComponents.add(comp);
 	}
 	
+	public void AddMarkComponents(Set<?> set) {
+		if (DRCComponents==null) 
+			DRCComponents = new HashSet<Object>();
+		DRCComponents.addAll(set);
+	}
+	
+	public void SetListNumber(int number) {
+		ListNumber = number;
+	}
+	
+	public boolean SupressCount() {
+		return this.SuppressCount;
+	}
+	
+	public int GetListNumber() {
+		return ListNumber;
+	}
+	
 	public void MarkComponents() {
 		if (!DRCInfoPresent())
 			return;
@@ -112,12 +164,19 @@ public class SimpleDRCContainer {
 					wire.SetMarked(true);
 				}
 			} else
+			if (obj instanceof Splitter) {
+				Splitter split = (Splitter)obj;
+				if ((MarkType&MARK_INSTANCE)!=0) {
+					split.SetMarked(true);
+				}
+			} else
 			if (obj instanceof InstanceComponent) {
 				InstanceComponent comp = (InstanceComponent)obj;
 				if ((MarkType&MARK_INSTANCE)!=0)
 					comp.MarkInstance();
 				if ((MarkType&MARK_LABEL)!=0)
 					comp.MarkLabel();
+			} else {
 			}
 		}
 	}
@@ -130,6 +189,12 @@ public class SimpleDRCContainer {
 				Wire wire = (Wire)obj;
 				if ((MarkType&MARK_WIRE)!=0) {
 					wire.SetMarked(false);
+				}
+			} else
+			if (obj instanceof Splitter) {
+				Splitter split = (Splitter)obj;
+				if ((MarkType&MARK_INSTANCE)!=0) {
+					split.SetMarked(false);
 				}
 			} else
 			if (obj instanceof InstanceComponent) {

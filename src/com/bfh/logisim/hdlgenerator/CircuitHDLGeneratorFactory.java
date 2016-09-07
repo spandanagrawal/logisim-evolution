@@ -153,11 +153,11 @@ public class CircuitHDLGeneratorFactory extends AbstractHDLGeneratorFactory {
 			}
 
 			// is the current circuit an 'empty vhdl box' ?
-			if (MyCircuit.getStaticAttributes().getValue(
-					CircuitAttributes.CIRCUIT_IS_VHDL_BOX)) {
-				if (!FileWriter.CopyArchitecture(
-						MyCircuit.getStaticAttributes().getValue(
-								CircuitAttributes.CIRCUIT_VHDL_PATH), WorkPath
+			String ArchName = MyCircuit.getStaticAttributes().getValue(
+					CircuitAttributes.CIRCUIT_VHDL_PATH);
+			
+			if (!ArchName.isEmpty()) {
+				if (!FileWriter.CopyArchitecture(ArchName, WorkPath
 								+ GetRelativeDirectory(HDLType), ComponentName,
 						Reporter, HDLType)) {
 					return false;
@@ -1114,14 +1114,14 @@ public class CircuitHDLGeneratorFactory extends AbstractHDLGeneratorFactory {
 
 		/* First we define the nets */
 		for (Net ThisNet : Nets.GetAllNets()) {
-			if (!ThisNet.isBus()) {
+			if (!ThisNet.isBus()&&ThisNet.IsRootNet()) {
 				SignalMap.put(
 						NetName + Integer.toString(Nets.GetNetId(ThisNet)), 1);
 			}
 		}
 		/* now we define the busses */
 		for (Net ThisNet : Nets.GetAllNets()) {
-			if (ThisNet.isBus()) {
+			if (ThisNet.isBus()&&ThisNet.IsRootNet()) {
 				int NrOfBits = ThisNet.BitWidth();
 				SignalMap.put(
 						BusName + Integer.toString(Nets.GetNetId(ThisNet)),

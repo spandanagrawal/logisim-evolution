@@ -317,6 +317,8 @@ public class FPGAIOInformationContainer {
 				|| MyType.equals(IOComponentTypes.PortIO)) {
 			MyType.setNbSwitch(NrOfPins);
 		}
+		if (MyType.equals(IOComponentTypes.Pin))
+			MyActivityLevel = PinActivity.ActiveHigh;
 		MyRectangle = new BoardRectangle(x, y, width, height);
 	}
 	
@@ -461,6 +463,9 @@ public class FPGAIOInformationContainer {
 		}
 		if (Vendor == FPGAClass.VendorAltera) {
 			return GetAlteraPinStrings(direction, StartId);
+		}
+		if (Vendor == FPGAClass.VendorVivado) {
+			return GetVivadoXDCStrings(direction, StartId);
 		}
 		return new ArrayList<String>();
 	}
@@ -825,6 +830,27 @@ public class FPGAIOInformationContainer {
 			Contents.add("NET \"" + NetName + "\" " + Temp.toString());
 		}
 		return Contents;
+	}
+
+	private ArrayList<String> GetVivadoXDCStrings(String direction, int StartId) {
+		ArrayList<String> contents = new ArrayList<String>();
+		for (int i = 0; i < NrOfPins; i++) {
+			String netName = "";
+			if (direction.equals("in")) {
+				netName = HDLGeneratorFactory.FPGAInputPinName + "_"
+						+ Integer.toString(StartId + i);
+			} else if (direction.equals("inout")) {
+				netName = HDLGeneratorFactory.FPGAInOutPinName + "_"
+						+ Integer.toString(StartId + i);
+			} else {
+				netName = HDLGeneratorFactory.FPGAOutputPinName + "_"
+						+ Integer.toString(StartId + i);
+			}
+			contents.add("set_property PACKAGE_PIN " + MyPinLocations.get(i) +
+					" [get_ports {" + netName + "}]");
+			contents.add("    set_property IOSTANDARD LVCMOS33 [get_ports {" + netName + "}]");
+		}
+		return contents;
 	}
 
 	public boolean IsInput() {

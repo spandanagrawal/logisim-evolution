@@ -68,11 +68,11 @@ import javax.swing.JTextArea;
 import javax.swing.ListSelectionModel;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-import com.bfh.logisim.designrulecheck.CircuitNetlist;
 import com.bfh.logisim.designrulecheck.CorrectLabel;
 import com.bfh.logisim.designrulecheck.Netlist;
 import com.bfh.logisim.designrulecheck.SimpleDRCContainer;
 import com.bfh.logisim.download.AlteraDownload;
+import com.bfh.logisim.download.VivadoDownload;
 import com.bfh.logisim.download.XilinxDownload;
 import com.bfh.logisim.fpgaboardeditor.BoardInformation;
 import com.bfh.logisim.fpgaboardeditor.BoardReaderClass;
@@ -146,6 +146,18 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 					GenerateDRCTrace((SimpleDRCContainer)ErrorsList.getElementAt(idx));
 				}
 			}
+		} else 
+		if (e.getSource().equals(Warnings)||
+			e.getSource().equals(WarningWindow.getListObject())) {
+			clearDRCTrace();
+			int idx = -1;
+			if (e.getSource().equals(Warnings))
+				idx = Warnings.getSelectedIndex();
+			else
+				idx = WarningWindow.getListObject().getSelectedIndex();
+			if (idx >= 0)
+				if (WarningsList.getElementAt(idx) instanceof SimpleDRCContainer)
+					GenerateDRCTrace((SimpleDRCContainer)WarningsList.getElementAt(idx));
 		}
 	}
 
@@ -182,7 +194,7 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 			if (comps.contains(panelErrors))
 				idx = tabbedPane.indexOfComponent(panelErrors);
 			tabbedPane.add(panelWarnings, idx);
-			tabbedPane.setTitleAt(idx, "Warnings (" + WarningsList.getSize() + ")");
+			tabbedPane.setTitleAt(idx, "Warnings (" + WarningsList.getCountNr() + ")");
 		}
 		if (e.getSource().equals(ErrorWindow)) {
 			int idx = tabbedPane.getComponentCount();
@@ -190,7 +202,7 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 			if (comps.contains(panelConsole))
 				idx = tabbedPane.indexOfComponent(panelConsole);
 			tabbedPane.add(panelErrors, idx);
-			tabbedPane.setTitleAt(idx, "Errors (" + ErrorsList.getSize() + ")");
+			tabbedPane.setTitleAt(idx, "Errors (" + ErrorsList.getCountNr() + ")");
 			clearDRCTrace();
 		}
 		if (e.getSource().equals(ConsoleWindow)) {
@@ -263,6 +275,7 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 		if (act == CircuitEvent.ACTION_SET_NAME) {
 			RebuildCircuitSelection();
 		}
+		clearDRCTrace();
 	}
 	
 
@@ -303,7 +316,7 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 	private BoardInformation MyBoardInformation = null;
 	private MappableResourcesContainer MyMappableResources;
 	private String[] HDLPaths = { Settings.VERILOG.toLowerCase(),
-			Settings.VHDL.toLowerCase(), "scripts", "sandbox", "ucf" };
+			Settings.VHDL.toLowerCase(), "scripts", "sandbox", "ucf", "xdc"};
 	@SuppressWarnings("unused")
 	private static final Integer VerilogSourcePath = 0;
 	@SuppressWarnings("unused")
@@ -311,6 +324,7 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 	private static final Integer ScriptPath = 2;
 	private static final Integer SandboxPath = 3;
 	private static final Integer UCFPath = 4;
+	private static final Integer XDCPath = 5;
 	private FPGAReport MyReporter = new FPGAReport(this);
 	
 	private FPGACommanderListModel WarningsList = new FPGACommanderListModel();
@@ -331,8 +345,7 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 		MyProject = Main;
 		InfoWindow = new FPGACommanderTextWindow("FPGACommander: Infos",Color.GRAY,true);
 		ConsoleWindow = new FPGACommanderTextWindow("FPGACommander: Console",Color.LIGHT_GRAY,false);
-		panel = new JFrame("FPGA Commander : "
-				+ MyProject.getLogisimFile().getName());
+		panel = new JFrame("FPGA Commander : " + MyProject.getLogisimFile().getName());
 		panel.setResizable(false);
 		panel.setAlwaysOnTop(false);
 		panel.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
@@ -340,6 +353,7 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 		InfoWindow.addWindowListener(this);
 		WarningWindow.addWindowListener(this);
 		WarningWindow.setSize(new Dimension(740,400));
+		WarningWindow.getListObject().addMouseListener(this);
 		ErrorWindow.addWindowListener(this);
 		ErrorWindow.setSize(new Dimension(740,400));
 		ErrorWindow.getListObject().addMouseListener(this);
@@ -485,10 +499,7 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 		panel.add(HDLType, c);
 
 		// HDL Only Radio
-		if ((MyBoardInformation.fpga.getVendor() == FPGAClass.VendorAltera && MySettings
-				.GetAlteraToolPath().equals(Settings.Unknown))
-				|| (MyBoardInformation.fpga.getVendor() == FPGAClass.VendorXilinx && MySettings
-						.GetXilixToolPath().equals(Settings.Unknown))) {
+		if (Settings.vendors.get(MyBoardInformation.fpga.getVendor()).getToolPath().equals(Settings.Unknown)) {
 			if (!MySettings.GetHDLOnly()) {
 				MySettings.SetHdlOnly(true);
 				MySettings.UpdateSettingsFile();
@@ -539,6 +550,7 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 		Warnings.setModel(WarningsList);
 		Warnings.setCellRenderer(WarningsList.getMyRenderer(true));
 		Warnings.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		Warnings.addMouseListener(this);
 		Errors.setBackground(bg);
 		Errors.setForeground(Color.RED);
 		Errors.setSelectionBackground(Color.RED);
@@ -657,10 +669,7 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 				boardIcon = new BoardIcon(MyBoardInformation.GetImage());
 				boardPic.setIcon(boardIcon);
 				boardPic.repaint();
-				if ((MyBoardInformation.fpga.getVendor() == FPGAClass.VendorAltera && MySettings
-						.GetAlteraToolPath().equals(Settings.Unknown))
-						|| (MyBoardInformation.fpga.getVendor() == FPGAClass.VendorXilinx && MySettings
-								.GetXilixToolPath().equals(Settings.Unknown))) {
+				if (Settings.vendors.get(MyBoardInformation.fpga.getVendor()).getToolPath().equals(Settings.Unknown)) {
 					if (!MySettings.GetHDLOnly()) {
 						MySettings.SetHdlOnly(true);
 						MySettings.UpdateSettingsFile();
@@ -704,10 +713,7 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 						boardIcon = new BoardIcon(MyBoardInformation.GetImage());
 						boardPic.setIcon(boardIcon);
 						boardPic.repaint();
-						if ((MyBoardInformation.fpga.getVendor() == FPGAClass.VendorAltera && MySettings
-								.GetAlteraToolPath().equals(Settings.Unknown))
-								|| (MyBoardInformation.fpga.getVendor() == FPGAClass.VendorXilinx && MySettings
-								.GetXilixToolPath().equals(Settings.Unknown))) {
+						if (Settings.vendors.get(MyBoardInformation.fpga.getVendor()).getToolPath().equals(Settings.Unknown)) {
 							if (!MySettings.GetHDLOnly()) {
 								MySettings.SetHdlOnly(true);
 								MySettings.UpdateSettingsFile();
@@ -755,7 +761,7 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 		int idx = tabbedPane.indexOfComponent(panelErrors);
 		if (idx >= 0) {
 			tabbedPane.setSelectedIndex(idx);
-			tabbedPane.setTitleAt(idx, "Errors (" + ErrorsList.getSize() + ")");
+			tabbedPane.setTitleAt(idx, "Errors (" + ErrorsList.getCountNr() + ")");
 			Rectangle rect = tabbedPane.getBounds();
 			rect.x = 0;
 			rect.y = 0;
@@ -799,7 +805,7 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 		int idx = tabbedPane.indexOfComponent(panelWarnings);
 		if (idx >= 0) {
 			tabbedPane.setSelectedIndex(idx);
-			tabbedPane.setTitleAt(idx, "Warnings (" + WarningsList.getSize() + ")");
+			tabbedPane.setTitleAt(idx, "Warnings (" + WarningsList.getCountNr() + ")");
 			Rectangle rect = tabbedPane.getBounds();
 			rect.x = 0;
 			rect.y = 0;
@@ -875,11 +881,11 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 		WarningsList.clear();
 		idx = tabbedPane.indexOfComponent(panelWarnings);
 		if (idx >= 0)
-			tabbedPane.setTitleAt(idx, "Warnings (" + WarningsList.getSize() + ")");
+			tabbedPane.setTitleAt(idx, "Warnings (" + WarningsList.getCountNr() + ")");
 		ErrorsList.clear();
 		idx = tabbedPane.indexOfComponent(panelErrors);
 		if (idx >= 0)
-			tabbedPane.setTitleAt(idx, "Errors (" + ErrorsList.getSize() + ")");
+			tabbedPane.setTitleAt(idx, "Errors (" + ErrorsList.getCountNr() + ")");
 		InfoWindow.clear();
 		ConsoleWindow.clear();
 		Rectangle rect = tabbedPane.getBounds();
@@ -950,7 +956,7 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 						ProjectDir + HDLPaths[SandboxPath] + File.separator,
 						MyReporter);
 			}
-		} else {
+		} else if (MyBoardInformation.fpga.getVendor() == FPGAClass.VendorXilinx) {
 			if (XilinxDownload.GenerateISEScripts(MyReporter, ProjectDir,
 					ProjectDir + HDLPaths[ScriptPath] + File.separator,
 					ProjectDir + HDLPaths[UCFPath] + File.separator,
@@ -964,6 +970,21 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 						ProjectDir + HDLPaths[UCFPath] + File.separator,
 						ProjectDir, ProjectDir + HDLPaths[SandboxPath]
 								+ File.separator, MyReporter);
+			}
+		} else if (MyBoardInformation.fpga.getVendor() == FPGAClass.VendorVivado) {
+			if (VivadoDownload.GenerateScripts(MyReporter, ProjectDir,
+					ProjectDir + HDLPaths[ScriptPath] + File.separator,
+					ProjectDir + HDLPaths[XDCPath] + File.separator,
+					ProjectDir + HDLPaths[SandboxPath] + File.separator,
+					RootSheet.getNetList(), MyMappableResources,
+					MyBoardInformation, Entities, Behaviors,
+					MySettings.GetHDLType(),
+					writeToFlash.isSelected())
+					&& !generateOnly) {
+				VivadoDownload.Download(
+						ProjectDir + HDLPaths[ScriptPath] + File.separator,
+						ProjectDir + HDLPaths[SandboxPath] + File.separator,
+						MyReporter);
 			}
 		}
 	}
@@ -1103,11 +1124,12 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 		String CircuitName = circuitsList.getSelectedItem().toString();
 		Circuit root = MyProject.getLogisimFile().getCircuit(CircuitName);
 		ArrayList<String> SheetNames = new ArrayList<String>();
-		int DRCResult = CircuitNetlist.DRC_PASSED;
+		int DRCResult = Netlist.DRC_PASSED;
 		if (root == null) {
-			DRCResult |= CircuitNetlist.DRC_ERROR;
+			DRCResult |= Netlist.DRC_ERROR;
 		} else {
-			DRCResult |= root.getNetList().DesignRuleCheckResult(MyReporter,
+			root.getNetList().clear();
+			DRCResult = root.getNetList().DesignRuleCheckResult(MyReporter,
 					HDLType.getText(), true, SheetNames);
 		}
 		return (DRCResult == Netlist.DRC_PASSED);
@@ -1131,12 +1153,7 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 	}
 
 	private void selectToolPath() {
-		String ToolPath;
-		if (MyBoardInformation.fpga.getVendor() == FPGAClass.VendorAltera) {
-			ToolPath = MySettings.GetAlteraToolPath();
-		} else {
-			ToolPath = MySettings.GetXilixToolPath();
-		}
+		String ToolPath = Settings.vendors.get(MyBoardInformation.fpga.getVendor()).getToolPath();
 		JFileChooser fc = new JFileChooser(ToolPath);
 		fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 		File test = new File(ToolPath);
@@ -1152,34 +1169,20 @@ public class FPGACommanderGui implements ActionListener,LibraryListener,ProjectL
 			if (!ToolPath.endsWith(File.separator)) {
 				ToolPath += File.separator;
 			}
-			if (MyBoardInformation.fpga.getVendor() == FPGAClass.VendorAltera) {
-				if (MySettings.SetAlteraToolPath(ToolPath)) {
-					HDLOnly.setEnabled(true);
-					MySettings.SetHdlOnly(false);
-					HDLOnly.setText(HDLandDownloadMessage);
-					if (!MySettings.UpdateSettingsFile()) {
-						AddErrors("***SEVERE*** Could not update the FPGACommander settings file");
-					} else {
-						AddInfo("Updated the FPGACommander settings file");
-					}
-
+			if (MySettings.setToolPath(MyBoardInformation.fpga.getVendor(), ToolPath)) {
+				HDLOnly.setEnabled(true);
+				MySettings.SetHdlOnly(false);
+				HDLOnly.setText(HDLandDownloadMessage);
+				if (!MySettings.UpdateSettingsFile()) {
+					AddErrors("***SEVERE*** Could not update the FPGACommander settings file");
 				} else {
-					AddErrors("***FATAL*** Required programs of the Altera toolsuite not found! Ignoring update.");
+					AddInfo("Updated the FPGACommander settings file");
 				}
+
 			} else {
-				if (MySettings.SetXilinxToolPath(ToolPath)) {
-					HDLOnly.setEnabled(true);
-					MySettings.SetHdlOnly(false);
-					HDLOnly.setText(HDLandDownloadMessage);
-					if (!MySettings.UpdateSettingsFile()) {
-						AddErrors("***SEVERE*** Could not update the FPGACommander settings file");
-					} else {
-						AddInfo("Updated the FPGACommander settings file");
-					}
-
-				} else {
-					AddErrors("***FATAL*** Required programs of the Xilinx toolsuite not found! Ignoring update.");
-				}
+				AddErrors("***FATAL*** Required programs of the " +
+						Settings.vendors.get(MyBoardInformation.fpga.getVendor()).getName()
+						+ " toolsuite not found! Ignoring update.");
 			}
 		}
 	}

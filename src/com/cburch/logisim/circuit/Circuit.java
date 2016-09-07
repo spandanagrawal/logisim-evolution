@@ -644,7 +644,7 @@ public class Circuit {
 	public Netlist getNetList() {
 		return MyNetList;
 	}
-
+	
 	public Set<Component> getNonWires() {
 		return comps;
 	}
