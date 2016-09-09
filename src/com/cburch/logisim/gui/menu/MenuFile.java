@@ -126,8 +126,10 @@ class MenuFile extends Menu implements ActionListener {
 		Project proj = menubar.getProject();
 		if (src == newi) {
 			ProjectActions.doNew(proj);
-		} else if (src == merge) { 
-		    ProjectActions.doMerge(proj == null ? null : proj.getFrame().getCanvas(),proj);
+		} else if (src == merge) {
+		    //ProjectActions.doMerge(proj == null ? null : proj.getFrame().getCanvas(),proj);
+            ProjectActions.displayException(proj == null ? null : proj.getFrame().getCanvas(),
+                    new Exception("Merge functionality has been disabled for CS 3410!\nSee https://piazza.com/class/is6uhkm6ul4e1?cid=226"));
 		}else if (src == open) {
 			ProjectActions.doOpen(proj == null ? null : proj.getFrame()
 					.getCanvas(), proj);

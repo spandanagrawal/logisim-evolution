@@ -188,7 +188,7 @@ public class ProjectActions {
 		return file;
 	}
 
-	private static void displayException(Component parent, Exception ex) {
+	public static void displayException(Component parent, Exception ex) {
 		String msg = StringUtil.format(Strings.get("templateOpenError"),
 				ex.toString());
 		String ttl = Strings.get("templateOpenErrorTitle");
