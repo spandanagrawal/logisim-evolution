@@ -1,3 +1,9 @@
+# Text Backup Files #
+*.sw[a-z]
+*~
+\#*\#
+.\#*
+
 # OS X
 *.DS_Store
 .AppleDouble
